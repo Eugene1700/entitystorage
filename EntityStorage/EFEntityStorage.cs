@@ -66,8 +66,7 @@ namespace EntityStorage
         {
             if (_mode.TranslatorMode == TranslatorMode.Full)
                 return await _context.Set<T>().ToLinqToDBTable().UpdateAsync(matchCondition, setter);
-            await Select<T>().Where(matchCondition).UpdateFromQueryAsync(setter);
-            return await _context.SaveChangesAsync();
+            return await Select<T>().Where(matchCondition).UpdateFromQueryAsync(setter);
         }
 
         public async Task UpdateSingle<T>(T entity, Expression<Func<T, T>> setter) where T : class, IEntity, new()
