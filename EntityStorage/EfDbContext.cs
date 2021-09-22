@@ -30,7 +30,6 @@ namespace EntityStorage
             base.OnModelCreating(modelBuilder);
         }
 
-
         public EfDbContext(DbContextOptions builder) : base(builder)
         {
             //todo

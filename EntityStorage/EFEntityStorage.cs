@@ -22,6 +22,7 @@ namespace EntityStorage
             _context = context;
             _clock = clock;
             _mode = mode;
+            _context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
         }
 
         public IQueryable<T> Select<T>() where T : class, IEntity
@@ -64,9 +65,7 @@ namespace EntityStorage
         public async Task<int> Update<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T, T>> setter)
             where T : class, IEntity, new()
         {
-            if (_mode.TranslatorMode == TranslatorMode.Full)
-                return await _context.Set<T>().ToLinqToDBTable().UpdateAsync(matchCondition, setter);
-            return await Select<T>().Where(matchCondition).UpdateFromQueryAsync(setter);
+            return await Z.EntityFramework.Plus.BatchUpdateExtensions.UpdateAsync(Select<T>().Where(matchCondition), setter);
         }
 
         public async Task UpdateSingle<T>(T entity, Expression<Func<T, T>> setter) where T : class, IEntity, new()
