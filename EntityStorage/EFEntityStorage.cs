@@ -31,10 +31,9 @@ namespace EntityStorage
                 _context.Set<T>().ToLinqToDB() : _context.Set<T>();
         }
 
-        public async Task<long> Create<T>(T entity) where T : class, IEntity
+        public async Task<long> Create<T>(T entity) where T : class, IEntity, new()
         {
-            if (entity is StandardEntity standardEntity)
-                standardEntity.CreationTime = _clock.Now;
+            SetServiceColumnForCreate(entity);
             var entityEntry = await _context.Set<T>().AddAsync(entity);
             await _context.SaveChangesAsync();
             return entityEntry.Entity.Id;
@@ -52,12 +51,32 @@ namespace EntityStorage
             var newEntity = new T();
             var action = CreateUpdateAction(creator);
             action.Invoke(newEntity);
+            SetServiceColumnForCreate(newEntity);
             _context.Add(newEntity);
             return await _context.SaveChangesAsync();
         }
 
-        public async Task Update<T>(T entity) where T : class, IEntity
+        private void SetServiceColumnsForUpdate<T>(T newEntity) where T : class, IEntity, new()
         {
+            if (newEntity is ModifiableEntity modificableEntity)
+            {
+                modificableEntity.ModificationTime = _clock.Now;
+                modificableEntity.Version += 1;
+            }
+        }
+
+        private void SetServiceColumnForCreate<T>(T newEntity) where T : class, IEntity, new()
+        {
+            if (newEntity is StandardEntity standardEntity)
+            {
+                standardEntity.CreationTime = _clock.Now;
+                standardEntity.SortDate = _clock.Now.Date;
+            }
+        }
+
+        public async Task Update<T>(T entity) where T : class, IEntity, new()
+        {
+            SetServiceColumnsForUpdate(entity);
             _context.Update(entity);
             await _context.SaveChangesAsync();
         }
@@ -65,6 +84,7 @@ namespace EntityStorage
         public async Task<int> Update<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T, T>> setter)
             where T : class, IEntity, new()
         {
+            //todo service columns
             return await Z.EntityFramework.Plus.BatchUpdateExtensions.UpdateAsync(Select<T>().Where(matchCondition), setter);
         }
 
@@ -83,11 +103,7 @@ namespace EntityStorage
                 entityEntry.Property(propertyInfo.Name).IsModified = true;
             }
 
-            if (entity is ModifiableEntity modificableEntity)
-            {
-                modificableEntity.ModificationTime = _clock.Now;
-                modificableEntity.Version += 1;
-            }
+            SetServiceColumnsForUpdate(entity);
 
             await _context.SaveChangesAsync();
             action.Invoke(entity);
@@ -168,6 +184,16 @@ namespace EntityStorage
     public interface IMode
     {
         public TranslatorMode TranslatorMode { get; }
+    }
+
+    internal class FullMode : IMode
+    {
+        public TranslatorMode TranslatorMode => TranslatorMode.Full;
+    }
+    
+    internal class EFOnlyMode : IMode
+    {
+        public TranslatorMode TranslatorMode => TranslatorMode.EFOnly;
     }
 
     public enum TranslatorMode

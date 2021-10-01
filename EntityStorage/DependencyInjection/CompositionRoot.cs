@@ -12,5 +12,15 @@ namespace EntityStorage.DependencyInjection
             serviceCollection.AddDbContextPool<EfDbContext>(builder);
             serviceCollection.AddScoped<IEntityStorage, EFEntityStorage>();
         }
+
+        public static void UseFullModeTranslator(this IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddScoped<IMode, FullMode>();
+        }
+        
+        public static void UseEFOnlyTranslator(this IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddScoped<IMode, EFOnlyMode>();
+        }
     }
 }

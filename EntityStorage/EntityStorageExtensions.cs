@@ -15,7 +15,7 @@ namespace EntityStorage
             return entityStorage.GetById<T>(entity.Id);
         }
 
-        public static async Task<T> CreateEntity<T>(this IEntityStorage entityStorage, T entity) where T : class, IEntity
+        public static async Task<T> CreateEntity<T>(this IEntityStorage entityStorage, T entity) where T : class, IEntity, new()
         {
             var id = await entityStorage.Create(entity);
             entity.Id = id;
