@@ -1,4 +1,5 @@
 ﻿using System;
+using EntityStorage.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

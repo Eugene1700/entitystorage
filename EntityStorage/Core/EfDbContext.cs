@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 
-namespace EntityStorage
+namespace EntityStorage.Core
 {
     public class EfDbContext : DbContext
     {

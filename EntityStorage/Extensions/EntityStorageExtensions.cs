@@ -1,7 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using EntityStorage.Core;
 
-namespace EntityStorage
+namespace EntityStorage.Extensions
 {
     public static class EntityStorageExtensions
     {

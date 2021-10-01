@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace EntityStorage
+namespace EntityStorage.Extensions
 {
     public static class ExpressionHelpers
     {

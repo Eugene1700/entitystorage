@@ -1,4 +1,4 @@
-﻿namespace EntityStorage
+﻿namespace EntityStorage.Core
 {
     public interface IEntity
     {
