@@ -14,6 +14,12 @@ namespace EntityStorage.Core
         private readonly EfDbContext _context;
         private readonly IClock _clock;
         private readonly IMode _mode;
+        
+        private static readonly PropertyInfo VersionPropertyInfo =
+            typeof(ModifiableEntity).GetProperty(nameof(ModifiableEntity.Version));
+
+        private static readonly PropertyInfo ModificationTimePropertyInfo =
+            typeof(ModifiableEntity).GetProperty(nameof(ModifiableEntity.ModificationTime));
 
         public EFEntityStorage(EfDbContext context, IClock clock, IMode mode)
         {
@@ -21,12 +27,14 @@ namespace EntityStorage.Core
             _clock = clock;
             _mode = mode;
             _context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+            // _context.ChangeTracker.AutoDetectChangesEnabled = false;
         }
 
         public IQueryable<T> Select<T>() where T : class, IEntity
         {
-            return _mode.TranslatorMode == TranslatorMode.Full ? 
-                _context.Set<T>().ToLinqToDB() : _context.Set<T>();
+            return _mode.TranslatorMode == TranslatorMode.Full
+                ? _context.Set<T>().ToLinqToDB().AsNoTracking()
+                : _context.Set<T>().AsNoTracking();
         }
 
         public async Task<long> Create<T>(T entity) where T : class, IEntity, new()
@@ -82,29 +90,27 @@ namespace EntityStorage.Core
         public async Task<int> Update<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T, T>> setter)
             where T : class, IEntity, new()
         {
-            //todo service columns
-            return await Z.EntityFramework.Plus.BatchUpdateExtensions.UpdateAsync(Select<T>().Where(matchCondition), setter);
+            return await Z.EntityFramework.Plus.BatchUpdateExtensions.UpdateAsync(Select<T>().Where(matchCondition),
+                PrepareUpdateSetter(setter));
         }
 
         public async Task UpdateSingle<T>(T entity, Expression<Func<T, T>> setter) where T : class, IEntity, new()
         {
-            var id = entity.Id;
-            var xMemberInit = (MemberInitExpression) setter.Body;
+            _context.ChangeTracker.Clear();
+            var entityEntry = _context.Attach(entity);
+            
             var actualSetter = PrepareUpdateSetter(setter);
+            var xMemberInit = (MemberInitExpression) actualSetter.Body;
             var action = CreateUpdateAction(actualSetter);
             action.Invoke(entity);
-            var entityEntry = _context.Attach(entity);
             foreach (var binding in xMemberInit.Bindings)
             {
                 var memberAssignment = (MemberAssignment) binding;
                 var propertyInfo = (PropertyInfo) memberAssignment.Member;
                 entityEntry.Property(propertyInfo.Name).IsModified = true;
             }
-
-            SetServiceColumnsForUpdate(entity);
-
+            
             await _context.SaveChangesAsync();
-            action.Invoke(entity);
         }
 
         public async Task Remove<T>(Expression<Func<T, bool>> whereExpression) where T : class, IEntity
@@ -121,10 +127,58 @@ namespace EntityStorage.Core
             if (memberInitExpression.Bindings.Count == 0)
                 throw new InvalidOperationException($"setter must must contain fields to update, current: [{setter}]");
             var actualSetter = setter;
-            // var isModifiable = typeof(ModifiableEntity).IsAssignableFrom(typeof(T));
-            // if (isModifiable)
-            //     actualSetter = PatchVersionAndModificationTime(setter, false);
+            var isModifiable = typeof(ModifiableEntity).IsAssignableFrom(typeof(T));
+            if (isModifiable)
+                actualSetter = PatchVersionAndModificationTime(setter, false);
             return actualSetter;
+        }
+        
+        private static readonly PropertyInfo nowPropertyInfo = typeof(DateTime).GetProperty(nameof(DateTime.Now),
+            BindingFlags.Static | BindingFlags.GetProperty | BindingFlags.Public);
+
+        private Expression<Func<T, T>> PatchVersionAndModificationTime<T>(Expression<Func<T, T>> exp,
+            bool setZeroVersion) where T : class, IEntity
+        {
+            var expressions = new Dictionary<PropertyInfo, Expression>
+            {
+                {
+                    ModificationTimePropertyInfo,
+                    Expression.Convert(Expression.Call(nowPropertyInfo.GetMethod),
+                        ModificationTimePropertyInfo.PropertyType)
+                },
+            };
+            if (setZeroVersion)
+                expressions.Add(VersionPropertyInfo, Expression.Constant((int) 1));
+            else
+                expressions.Add(VersionPropertyInfo,
+                    Expression.Add(Expression.Property(exp.Parameters[0], VersionPropertyInfo),
+                        Expression.Constant((int) 1)));
+            return PatchMemberAssigment(exp, expressions);
+        }
+        
+        private Expression<Func<T, T>> PatchMemberAssigment<T>(Expression<Func<T, T>> setter,
+            Dictionary<PropertyInfo, Expression> patchers) where T : class, IEntity
+        {
+            var xMemberInit = (MemberInitExpression) setter.Body;
+            var bindings = new List<MemberBinding>();
+            var alreadyAssigned = new List<PropertyInfo>();
+            foreach (var binding in xMemberInit.Bindings)
+            {
+                bindings.Add(binding);
+                var bindingMember = binding.Member as PropertyInfo;
+                alreadyAssigned.Add(bindingMember);
+            }
+
+            foreach (var patcher in patchers)
+            {
+                if (!alreadyAssigned.Contains(patcher.Key))
+                {
+                    bindings.Add(Expression.Bind(patcher.Key, patcher.Value));
+                }
+            }
+
+            var xBody = Expression.MemberInit(xMemberInit.NewExpression, bindings);
+            return Expression.Lambda<Func<T, T>>(xBody, setter.Parameters);
         }
 
         private static Action<T> CreateUpdateAction<T>(Expression<Func<T, T>> setter) where T : class, IEntity
@@ -188,7 +242,7 @@ namespace EntityStorage.Core
     {
         public TranslatorMode TranslatorMode => TranslatorMode.Full;
     }
-    
+
     internal class EFOnlyMode : IMode
     {
         public TranslatorMode TranslatorMode => TranslatorMode.EFOnly;

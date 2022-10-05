@@ -16,6 +16,7 @@ namespace EntityStorage.Core
                 .Where(p => p.IsClass && !p.IsAbstract &&
                             iType.IsAssignableFrom(p)).ToArray();
             
+            //todo
             types.Select(x => x.Name).ToList().ForEach(Console.WriteLine);
 
             foreach (var type in types)
@@ -32,8 +33,6 @@ namespace EntityStorage.Core
 
         public EfDbContext(DbContextOptions builder) : base(builder)
         {
-            //todo
-            Database.EnsureCreated();
         }
     }
 }

@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityStorage", "EntityStorage\EntityStorage.csproj", "{75384B2F-2973-40D1-AE59-6EEE47FB25C8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqliteTools", "SqliteTools\SqliteTools.csproj", "{D5FF74B0-375B-4B2A-8A6E-1A2E95AC3D9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityStorage.Tests", "EntityStorage.Tests\EntityStorage.Tests.csproj", "{A2C28D83-D184-48ED-B56C-AD8A3817A38F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{75384B2F-2973-40D1-AE59-6EEE47FB25C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75384B2F-2973-40D1-AE59-6EEE47FB25C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75384B2F-2973-40D1-AE59-6EEE47FB25C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5FF74B0-375B-4B2A-8A6E-1A2E95AC3D9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5FF74B0-375B-4B2A-8A6E-1A2E95AC3D9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5FF74B0-375B-4B2A-8A6E-1A2E95AC3D9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5FF74B0-375B-4B2A-8A6E-1A2E95AC3D9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2C28D83-D184-48ED-B56C-AD8A3817A38F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2C28D83-D184-48ED-B56C-AD8A3817A38F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2C28D83-D184-48ED-B56C-AD8A3817A38F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2C28D83-D184-48ED-B56C-AD8A3817A38F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
