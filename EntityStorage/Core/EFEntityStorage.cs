@@ -27,7 +27,7 @@ namespace EntityStorage.Core
             _clock = clock;
             _mode = mode;
             _context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-            // _context.ChangeTracker.AutoDetectChangesEnabled = false;
+            _context.ChangeTracker.AutoDetectChangesEnabled = false;
         }
 
         public IQueryable<T> Select<T>() where T : class, IEntity
@@ -41,50 +41,39 @@ namespace EntityStorage.Core
         {
             SetServiceColumnForCreate(entity);
             var entityEntry = await _context.Set<T>().AddAsync(entity);
-            await _context.SaveChangesAsync();
+            await SaveChangesAndClearChangeTrackerAsync();
             return entityEntry.Entity.Id;
         }
 
-        public async Task<int> CreateIfNotExist<T>(Expression<Func<T, bool>> matchCondition,
+        private async Task<int> SaveChangesAndClearChangeTrackerAsync()
+        {
+            var res = await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+            return res;
+        }
+
+        public async Task<bool> CreateIfNotExist<T>(Expression<Func<T, bool>> matchCondition,
             Expression<Func<T>> creator) where T : class, IEntity, new()
         {
-            //todo create batch
             if (!(creator.Body is MemberInitExpression))
                 throw new InvalidOperationException(
                     $"setter must be lambda expression with init entity body, current: [{creator}]");
-            var existance = await EntityFrameworkQueryableExtensions.AnyAsync(_context.Set<T>(), matchCondition);
-            if (existance) return 0;
+            var existance = await _context.Set<T>().AnyAsync(matchCondition);
+            if (existance) return false;
             var newEntity = new T();
             var action = CreateUpdateAction(creator);
             action.Invoke(newEntity);
             SetServiceColumnForCreate(newEntity);
             _context.Add(newEntity);
-            return await _context.SaveChangesAsync();
-        }
-
-        private void SetServiceColumnsForUpdate<T>(T newEntity) where T : class, IEntity, new()
-        {
-            if (newEntity is ModifiableEntity modificableEntity)
-            {
-                modificableEntity.ModificationTime = _clock.Now;
-                modificableEntity.Version += 1;
-            }
-        }
-
-        private void SetServiceColumnForCreate<T>(T newEntity) where T : class, IEntity, new()
-        {
-            if (newEntity is StandardEntity standardEntity)
-            {
-                standardEntity.CreationTime = _clock.Now;
-                standardEntity.SortDate = _clock.Now.Date;
-            }
+            var res = await SaveChangesAndClearChangeTrackerAsync();
+            return res != 0;
         }
 
         public async Task Update<T>(T entity) where T : class, IEntity, new()
         {
             SetServiceColumnsForUpdate(entity);
             _context.Update(entity);
-            await _context.SaveChangesAsync();
+            await SaveChangesAndClearChangeTrackerAsync();
         }
 
         public async Task<int> Update<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T, T>> setter)
@@ -96,8 +85,7 @@ namespace EntityStorage.Core
 
         public async Task UpdateSingle<T>(T entity, Expression<Func<T, T>> setter) where T : class, IEntity, new()
         {
-            _context.ChangeTracker.Clear();
-            var entityEntry = _context.Attach(entity);
+            var entityEntry = _context.Entry(entity);
             
             var actualSetter = PrepareUpdateSetter(setter);
             var xMemberInit = (MemberInitExpression) actualSetter.Body;
@@ -110,7 +98,7 @@ namespace EntityStorage.Core
                 entityEntry.Property(propertyInfo.Name).IsModified = true;
             }
             
-            await _context.SaveChangesAsync();
+            await SaveChangesAndClearChangeTrackerAsync();
         }
 
         public async Task Remove<T>(Expression<Func<T, bool>> whereExpression) where T : class, IEntity
@@ -229,6 +217,24 @@ namespace EntityStorage.Core
             protected override Expression VisitParameter(ParameterExpression node)
             {
                 return base.VisitParameter(parameter);
+            }
+        }
+        
+        private void SetServiceColumnsForUpdate<T>(T newEntity) where T : class, IEntity, new()
+        {
+            if (newEntity is ModifiableEntity modificableEntity)
+            {
+                modificableEntity.ModificationTime = _clock.Now;
+                modificableEntity.Version += 1;
+            }
+        }
+
+        private void SetServiceColumnForCreate<T>(T newEntity) where T : class, IEntity, new()
+        {
+            if (newEntity is StandardEntity standardEntity)
+            {
+                standardEntity.CreationTime = _clock.Now;
+                standardEntity.SortDate = _clock.Now.Date;
             }
         }
     }

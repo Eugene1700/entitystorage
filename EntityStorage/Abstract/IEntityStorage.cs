@@ -10,7 +10,7 @@ namespace EntityStorage
     {
         IQueryable<T> Select<T>() where T : class, IEntity;
         Task<long> Create<T>(T entity) where T : class, IEntity, new();
-        Task<int> CreateIfNotExist<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T>> creator)
+        Task<bool> CreateIfNotExist<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T>> creator)
             where T : class, IEntity, new ();
         Task Update<T>(T entity) where T : class, IEntity, new();
         Task<int> Update<T>(Expression<Func<T, bool>> matchCondition, Expression<Func<T, T>> setter)

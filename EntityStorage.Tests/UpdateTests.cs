@@ -9,28 +9,17 @@ using NUnit.Framework;
 
 namespace EntityStorage.Tests
 {
-    public class SimpleTests : BaseTest
+    public class UpdateTests : BaseTest
     {
         private readonly IEntityStorage _entityStorage;
 
-        public SimpleTests():base()
+        public UpdateTests()
         {
             _entityStorage = ServiceProvider.GetRequiredService<IEntityStorage>();
         }
-        
-        [SetUp]
-        public void Setup()
-        {
-            if (File.Exists(DevDb))
-            {
-                File.Delete(DevDb);
-            }
-            var context = ServiceProvider.GetRequiredService<EfDbContext>();
-            context.Database.EnsureCreated();
-        }
 
         [Test]
-        public async Task UpdateSingleUpdateServiceField()
+        public async Task UpdateSingle()
         {
             var newEntity = await _entityStorage.CreateEntity(new TestModel
             {
@@ -60,7 +49,7 @@ namespace EntityStorage.Tests
         }
         
         [Test]
-        public async Task UpdateServiceField()
+        public async Task Update()
         {
             var newEntity = await _entityStorage.CreateEntity(new TestModel
             {

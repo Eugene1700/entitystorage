@@ -1,13 +1,15 @@
 ﻿using System;
+using EntityStorage.Core;
 using EntityStorage.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 
 namespace EntityStorage.Tests
 {
     public class BaseTest
     {
-        protected const string DevDb = "dev.db";
+        private const string DevDb = "dev.db";
         protected BaseTest()
         {
             var serviceCollection = new ServiceCollection();
@@ -16,7 +18,15 @@ namespace EntityStorage.Tests
             serviceCollection.AddEntityStorage(x=>x.UseSqlite($"Data Source={DevDb}"));
             ServiceProvider = serviceCollection.BuildServiceProvider();
         }
+        
+        [SetUp]
+        public virtual void Setup()
+        {
+            var context = ServiceProvider.GetRequiredService<EfDbContext>();
+            context.Database.EnsureDeleted();
+            context.Database.EnsureCreated();
+        }
 
-        public IServiceProvider ServiceProvider { get; }
+        protected IServiceProvider ServiceProvider { get; }
     }
 }
