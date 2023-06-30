@@ -30,9 +30,5 @@ namespace EntityStorage.Core
             }
             base.OnModelCreating(modelBuilder);
         }
-
-        public EfDbContext(DbContextOptions builder) : base(builder)
-        {
-        }
     }
 }
